@@ -327,7 +327,7 @@ GameObject:
   - component: {fileID: 233866603}
   - component: {fileID: 233866602}
   m_Layer: 0
-  m_Name: PointToPolygonUnlit (1)
+  m_Name: VoxelUnlit
   m_TagString: Untagged
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0

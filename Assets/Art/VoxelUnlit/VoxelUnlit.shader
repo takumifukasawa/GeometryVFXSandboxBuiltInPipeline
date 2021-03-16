@@ -51,7 +51,7 @@ Shader "Unlit/VoxelUnlit"
                 float2 uv;
             };
 
-            VertexAttributes CreateVoxelVertex(float4 vertex, float2 uv, float size, int index) {
+            VertexAttributes CreateVoxelVertex(float4 vertex, float size, int offsetIndex, int uvIndex) {
                 // -------------------
                 //     5 ----- 7
                 //    /|      /|
@@ -62,21 +62,35 @@ Shader "Unlit/VoxelUnlit"
                 //   0 ----- 2
                 // -------------------
                 float3 offsets[8] = {
-                    float3(-1, -1, -1),
-                    float3(-1, 1, -1),
-                    float3(1, -1, -1),
-                    float3(1, 1, -1),
-                    float3(-1, -1, 1),
-                    float3(-1, 1, 1),
-                    float3(1, -1, 1),
-                    float3(1, 1, 1)
+                    float3(-1, -1, -1), // 0
+                    float3(-1, 1, -1),  // 1
+                    float3(1, -1, -1),  // 2
+                    float3(1, 1, -1),   // 3
+                    float3(-1, -1, 1),  // 4
+                    float3(-1, 1, 1),   // 5
+                    float3(1, -1, 1),   // 6
+                    float3(1, 1, 1)     // 7
+                };
+
+                // -------------------
+                //   1 ----- 3
+                //   |       |
+                //   |       |
+                //   |       |
+                //   0 ----- 2
+                // -------------------
+                float2 uvs[4] = {
+                    float2(0, 0),
+                    float2(0, 1),
+                    float2(1, 0),
+                    float2(1, 1)
                 };
             
-                float3 offset = offsets[index];
+                float3 offset = offsets[offsetIndex];
 
                 VertexAttributes o;
                 o.vertex = vertex + float4(offset.x, offset.y, offset.z, 0.) * size;
-                o.uv = uv;
+                o.uv = uvs[uvIndex];
                 return o;
             }
 
@@ -92,15 +106,53 @@ Shader "Unlit/VoxelUnlit"
             void geom (triangle appdata inputs[3], inout TriangleStream<g2f> outStream) {
                 float4 center = (inputs[0].vertex + inputs[1].vertex + inputs[2].vertex) / 3;
                 float2 uv = (inputs[0].uv + inputs[1].uv + inputs[2].uv) / 3;
-  
-                outStream.Append(PackVertex(CreateVoxelVertex(center, uv, _Size, 0)));
-                outStream.Append(PackVertex(CreateVoxelVertex(center, uv, _Size, 1)));
-                outStream.Append(PackVertex(CreateVoxelVertex(center, uv, _Size, 2)));
+
+                // front
+
+                outStream.Append(PackVertex(CreateVoxelVertex(center, _Size, 0, 0)));
+                outStream.Append(PackVertex(CreateVoxelVertex(center, _Size, 1, 1)));
+                outStream.Append(PackVertex(CreateVoxelVertex(center, _Size, 2, 2)));
+                outStream.Append(PackVertex(CreateVoxelVertex(center, _Size, 3, 3)));
                 outStream.RestartStrip();
 
-                outStream.Append(PackVertex(CreateVoxelVertex(center, uv, _Size, 2)));
-                outStream.Append(PackVertex(CreateVoxelVertex(center, uv, _Size, 1)));
-                outStream.Append(PackVertex(CreateVoxelVertex(center, uv, _Size, 3)));
+                // left
+
+                outStream.Append(PackVertex(CreateVoxelVertex(center, _Size, 4, 0)));
+                outStream.Append(PackVertex(CreateVoxelVertex(center, _Size, 5, 1)));
+                outStream.Append(PackVertex(CreateVoxelVertex(center, _Size, 0, 2)));
+                outStream.Append(PackVertex(CreateVoxelVertex(center, _Size, 1, 3)));
+                outStream.RestartStrip();
+
+                // back
+
+                outStream.Append(PackVertex(CreateVoxelVertex(center, _Size, 6, 0)));
+                outStream.Append(PackVertex(CreateVoxelVertex(center, _Size, 7, 1)));
+                outStream.Append(PackVertex(CreateVoxelVertex(center, _Size, 4, 2)));
+                outStream.Append(PackVertex(CreateVoxelVertex(center, _Size, 5, 3)));
+                outStream.RestartStrip();
+
+                // right
+
+                outStream.Append(PackVertex(CreateVoxelVertex(center, _Size, 2, 0)));
+                outStream.Append(PackVertex(CreateVoxelVertex(center, _Size, 3, 1)));
+                outStream.Append(PackVertex(CreateVoxelVertex(center, _Size, 6, 2)));
+                outStream.Append(PackVertex(CreateVoxelVertex(center, _Size, 7, 3)));
+                outStream.RestartStrip();
+
+                // top
+
+                outStream.Append(PackVertex(CreateVoxelVertex(center, _Size, 1, 0)));
+                outStream.Append(PackVertex(CreateVoxelVertex(center, _Size, 5, 1)));
+                outStream.Append(PackVertex(CreateVoxelVertex(center, _Size, 3, 2)));
+                outStream.Append(PackVertex(CreateVoxelVertex(center, _Size, 7, 3)));
+                outStream.RestartStrip();
+
+                // bottom
+
+                outStream.Append(PackVertex(CreateVoxelVertex(center, _Size, 2, 0)));
+                outStream.Append(PackVertex(CreateVoxelVertex(center, _Size, 6, 1)));
+                outStream.Append(PackVertex(CreateVoxelVertex(center, _Size, 0, 2)));
+                outStream.Append(PackVertex(CreateVoxelVertex(center, _Size, 4, 3)));
                 outStream.RestartStrip();
             }
 

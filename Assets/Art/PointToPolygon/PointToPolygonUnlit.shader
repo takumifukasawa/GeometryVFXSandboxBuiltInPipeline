@@ -48,7 +48,6 @@ Shader "Unlit/PointToPolygonUnlit"
             [maxvertexcount(4)]
             void geom (triangle appdata inputs[3], inout TriangleStream<g2f> outStream) {
                 float4 center = (inputs[0].vertex + inputs[1].vertex + inputs[2].vertex) / 3;
-                float2 uv = (inputs[0].uv + inputs[1].uv + inputs[2].uv) / 3;
 
                 // -------------------
                 //   [1]-----[3]
@@ -60,18 +59,28 @@ Shader "Unlit/PointToPolygonUnlit"
                 //    |     \ |
                 //   [0]-----[2]
                 // -------------------
+
                 float2 offsets[4] = {
                     float2(-1, -1),
                     float2(-1, 1),
                     float2(1, -1),
                     float2(1, 1)
                 };
+
+                float2 uvs[4] = {
+                    float2(0, 0),
+                    float2(0, 1),
+                    float2(1, 0),
+                    float2(1, 1)
+                };
   
                 [unroll]
                 for(int i = 0; i < 4; i++) {
                     g2f o;
-                    o.vertex = UnityObjectToClipPos(center + float4(offsets[i].x, offsets[i].y, 0., 0.) * _Size);
-                    UNITY_TRANSFER_FOG(o,o.vertex);
+                    float2 offset = offsets[i];
+                    float2 uv = uvs[i];
+                    o.vertex = UnityObjectToClipPos(center + float4(offset.x, offset.y, 0., 0.) * _Size);
+                    UNITY_TRANSFER_FOG(o, o.vertex);
                     o.uv = TRANSFORM_TEX(uv, _MainTex);
                     outStream.Append(o);
                 }
