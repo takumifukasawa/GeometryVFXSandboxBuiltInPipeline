@@ -7,8 +7,8 @@ Material:
   m_CorrespondingSourceObject: {fileID: 0}
   m_PrefabInstance: {fileID: 0}
   m_PrefabAsset: {fileID: 0}
-  m_Name: PassThroughUnlit
-  m_Shader: {fileID: 4800000, guid: b01f378bf13a9e84db1e9b667e1a0ce2, type: 3}
+  m_Name: VoxelUnlit
+  m_Shader: {fileID: 4800000, guid: 0adf8e0a51191e24099dbe5a1d4cb85e, type: 3}
   m_ShaderKeywords: 
   m_LightmapFlags: 4
   m_EnableInstancingVariants: 0

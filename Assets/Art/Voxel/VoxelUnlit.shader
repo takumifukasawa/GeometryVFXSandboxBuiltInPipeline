@@ -50,44 +50,74 @@ Shader "Unlit/VoxelUnlit"
             sampler2D _MainTex;
             float4 _MainTex_ST;
 
-            v2g vert (appdata v)
+            appdata vert (appdata v)
             {
-                v2g o;
-                o.vertex = UnityObjectToClipPos(v.vertex);
-                o.uv = TRANSFORM_TEX(v.uv, _MainTex);
-                // UNITY_TRANSFER_FOG(o,o.vertex);
-                return o;
+                return v;
+                // v2g o;
+                // o.vertex = UnityObjectToClipPos(v.vertex);
+                // o.uv = TRANSFORM_TEX(v.uv, _MainTex);
+                // // UNITY_TRANSFER_FOG(o,o.vertex);
+                // return o;
             }
 
+            // [maxvertexcount(4)]
             [maxvertexcount(4)]
-            void geom (triangle v2g inputs[3], inout TriangleStream<g2f> outStream) {
+            void geom (triangle appdata inputs[3], inout TriangleStream<g2f> outStream) {
+                // float4 center = (inputs[0].vertex + inputs[1].vertex + inputs[2].vertex) / 3;
+                // float2 uv = (inputs[0].uv + inputs[1].uv + inputs[2].uv) / 3;
+                // float2 offsets[4] = {
+                //     float2(-1, -1),
+                //     float2(1, -1),
+                //     float2(-1, 1),
+                //     float2(1, 1)
+                // };
+                // [unroll]
+                // for(int i = 0; i < 4; i++) {
+                //     float2 offset = offsets[i];
+                //     // g2f o;
+                //     // o.vertex = center + float4(offset.x, offset.y, 0., 0.) * 0.01;
+                //     // o.uv = offset;
+
+                //     float4 vertex = center + float4(offset.x, offset.y, 0., 0.) * 0.01;
+                //     float2 uv = offset;
+
+                //     g2f o;
+                //     o.vertex = UnityObjectToClipPos(vertex);
+                //     o.uv = TRANSFORM_TEX(uv, _MainTex);
+
+                //     outStream.Append(o);
+                //     // outStream.Append(inputs[i]);
+                // }
+                //     // outStream.Append(inputs[0]);
+                //     // outStream.Append(inputs[1]);
+                //     // outStream.Append(inputs[2]);
+                //     // outStream.Append(inputs[2]);
+                // outStream.RestartStrip();
+                // // outStream.Append(inputs[0]);
+                // // outStream.Append(inputs[1]);
+                // // outStream.Append(inputs[2]);
+                // // outStream.Append(inputs[2]);
+                // // outStream.RestartStrip();
+
                 float4 center = (inputs[0].vertex + inputs[1].vertex + inputs[2].vertex) / 3;
                 float2 uv = (inputs[0].uv + inputs[1].uv + inputs[2].uv) / 3;
                 float2 offsets[4] = {
                     float2(-1, -1),
-                    float2(1, -1),
                     float2(-1, 1),
+                    float2(1, -1),
                     float2(1, 1)
                 };
+  
                 [unroll]
                 for(int i = 0; i < 4; i++) {
-                    float2 offset = offsets[i];
                     g2f o;
-                    o.vertex = center + float4(offset.x, offset.y, 0., 0.) * 0.01;
-                    o.uv = offset;
+                    o.vertex = UnityObjectToClipPos(center + float4(offsets[i].x, offsets[i].y, 0., 0.) * 0.01);
+                    o.uv = TRANSFORM_TEX(uv, _MainTex);
                     outStream.Append(o);
-                    // outStream.Append(inputs[i]);
                 }
-                    // outStream.Append(inputs[0]);
-                    // outStream.Append(inputs[1]);
-                    // outStream.Append(inputs[2]);
-                    // outStream.Append(inputs[2]);
                 outStream.RestartStrip();
-                // outStream.Append(inputs[0]);
-                // outStream.Append(inputs[1]);
-                // outStream.Append(inputs[2]);
-                // outStream.Append(inputs[2]);
-                // outStream.RestartStrip();
+
+   
             }
 
             fixed4 frag (g2f i) : SV_Target
