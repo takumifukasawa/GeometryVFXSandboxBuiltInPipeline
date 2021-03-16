@@ -29,20 +29,12 @@ Shader "Unlit/PointToPolygonUnlit"
                 float2 uv : TEXCOORD0;
             };
 
-            struct v2g
-            {
-                float2 uv : TEXCOORD0;
-                UNITY_FOG_COORDS(1)
-                float4 vertex : SV_POSITION;
-            };
-
             struct g2f
             {
                 float2 uv : TEXCOORD0;
                 UNITY_FOG_COORDS(1)
                 float4 vertex : SV_POSITION;
             };
-
 
             sampler2D _MainTex;
             float4 _MainTex_ST;
