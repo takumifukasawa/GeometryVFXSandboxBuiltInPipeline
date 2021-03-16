@@ -53,7 +53,6 @@ Shader "Unlit/PointToPolygonUnlit"
                 return v;
             }
 
-            // [maxvertexcount(4)]
             [maxvertexcount(4)]
             void geom (triangle appdata inputs[3], inout TriangleStream<g2f> outStream) {
                 float4 center = (inputs[0].vertex + inputs[1].vertex + inputs[2].vertex) / 3;
