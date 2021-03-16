@@ -32,14 +32,14 @@ Shader "Unlit/PointToPolygonUnlit"
             struct v2g
             {
                 float2 uv : TEXCOORD0;
-                // UNITY_FOG_COORDS(1)
+                UNITY_FOG_COORDS(1)
                 float4 vertex : SV_POSITION;
             };
 
             struct g2f
             {
                 float2 uv : TEXCOORD0;
-                // UNITY_FOG_COORDS(1)
+                UNITY_FOG_COORDS(1)
                 float4 vertex : SV_POSITION;
             };
 
@@ -80,12 +80,11 @@ Shader "Unlit/PointToPolygonUnlit"
                 for(int i = 0; i < 4; i++) {
                     g2f o;
                     o.vertex = UnityObjectToClipPos(center + float4(offsets[i].x, offsets[i].y, 0., 0.) * _Size);
+                    UNITY_TRANSFER_FOG(o,o.vertex);
                     o.uv = TRANSFORM_TEX(uv, _MainTex);
                     outStream.Append(o);
                 }
                 outStream.RestartStrip();
-
-   
             }
 
             fixed4 frag (g2f i) : SV_Target
@@ -93,8 +92,7 @@ Shader "Unlit/PointToPolygonUnlit"
                 // sample the texture
                 fixed4 col = tex2D(_MainTex, i.uv);
                 // apply fog
-                // UNITY_APPLY_FOG(i.fogCoord, col);
-                col.xy = i.uv;
+                UNITY_APPLY_FOG(i.fogCoord, col);
                 return col;
             }
             ENDCG
