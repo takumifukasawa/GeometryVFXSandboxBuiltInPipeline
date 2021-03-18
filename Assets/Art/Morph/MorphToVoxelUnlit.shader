@@ -5,6 +5,7 @@ Shader "Unlit/MorphToVoxelUnlit"
         _MainTex ("Texture", 2D) = "white" {}
         _VoxelSize ("Size", Range(0, 0.1)) = 0.01
         _MorphRate ("Morph Rate", Range(0, 1)) = 0
+        [MaterialToggle] _ShowUV ("Show UV", Float) = 0
     }
     SubShader
     {
@@ -41,6 +42,7 @@ Shader "Unlit/MorphToVoxelUnlit"
             float4 _MainTex_ST;
             float _VoxelSize;
             float _MorphRate;
+            float _ShowUV;
 
             appdata vert (appdata v)
             {
@@ -53,7 +55,7 @@ Shader "Unlit/MorphToVoxelUnlit"
                 float2 uv;
             };
 
-            VertexAttributes CreateVoxelVertex(float4 vertex, float size, int offsetIndex, int uvIndex) {
+            VertexAttributes CreateVoxelVertex(float4 vertex, int offsetIndex, int uvIndex, float4 morphOrigin) {
                 // -------------------
                 //     5 ----- 7
                 //    /|      /|
@@ -91,7 +93,12 @@ Shader "Unlit/MorphToVoxelUnlit"
                 float3 offset = offsets[offsetIndex];
 
                 VertexAttributes o;
-                o.vertex = vertex + float4(offset.x, offset.y, offset.z, 0.) * size;
+                o.vertex = lerp(
+                    morphOrigin,
+                    vertex + float4(offset.x, offset.y, offset.z, 0.) * _VoxelSize,
+                    _MorphRate
+                );
+                // o.vertex = vertex + float4(offset.x, offset.y, offset.z, 0.) * _VoxelSize * _MorphRate;
                 o.uv = uvs[uvIndex];
                 return o;
             }
@@ -106,25 +113,33 @@ Shader "Unlit/MorphToVoxelUnlit"
 
             [maxvertexcount(24)]
             void geom (triangle appdata inputs[3], inout TriangleStream<g2f> outStream) {
+                appdata i0 = inputs[0];
+                appdata i1 = inputs[1];
+                appdata i2 = inputs[2];
+
                 float4 center = (inputs[0].vertex + inputs[1].vertex + inputs[2].vertex) / 3;
                 float2 uv = (inputs[0].uv + inputs[1].uv + inputs[2].uv) / 3;
 
                 if(_MorphRate < 0.01) {
+
+                    VertexAttributes a0;
                     VertexAttributes a1;
                     VertexAttributes a2;
-                    VertexAttributes a3;
 
-                    a1.vertex = inputs[0].vertex;
-                    a2.vertex = inputs[1].vertex;
-                    a3.vertex = inputs[2].vertex;
+                    a0.vertex = i0.vertex;
+                    a1.vertex = i1.vertex;
+                    a2.vertex = i2.vertex;
+                    // a0.vertex = lerp(i0.vertex, center, _MorphRate);
+                    // a1.vertex = lerp(i1.vertex, center, _MorphRate);
+                    // a2.vertex = lerp(i2.vertex, center, _MorphRate);
 
-                    a1.uv = inputs[0].uv;
-                    a2.uv = inputs[1].uv;
-                    a3.uv = inputs[2].uv;
+                    a0.uv = i0.uv;
+                    a1.uv = i1.uv;
+                    a2.uv = i2.uv;
 
+                    outStream.Append(PackVertex(a0));
                     outStream.Append(PackVertex(a1));
                     outStream.Append(PackVertex(a2));
-                    outStream.Append(PackVertex(a3));
                     outStream.RestartStrip();
 
                     return;
@@ -132,58 +147,61 @@ Shader "Unlit/MorphToVoxelUnlit"
 
                 // front
 
-                outStream.Append(PackVertex(CreateVoxelVertex(center, _VoxelSize, 0, 0)));
-                outStream.Append(PackVertex(CreateVoxelVertex(center, _VoxelSize, 1, 1)));
-                outStream.Append(PackVertex(CreateVoxelVertex(center, _VoxelSize, 2, 2)));
-                outStream.Append(PackVertex(CreateVoxelVertex(center, _VoxelSize, 3, 3)));
+                outStream.Append(PackVertex(CreateVoxelVertex(center, 0, 0, i0.vertex)));
+                outStream.Append(PackVertex(CreateVoxelVertex(center, 1, 1, i1.vertex)));
+                outStream.Append(PackVertex(CreateVoxelVertex(center, 2, 2, i2.vertex)));
+                outStream.Append(PackVertex(CreateVoxelVertex(center, 3, 3, i0.vertex)));
                 outStream.RestartStrip();
 
                 // left
 
-                outStream.Append(PackVertex(CreateVoxelVertex(center, _VoxelSize, 4, 0)));
-                outStream.Append(PackVertex(CreateVoxelVertex(center, _VoxelSize, 5, 1)));
-                outStream.Append(PackVertex(CreateVoxelVertex(center, _VoxelSize, 0, 2)));
-                outStream.Append(PackVertex(CreateVoxelVertex(center, _VoxelSize, 1, 3)));
+                outStream.Append(PackVertex(CreateVoxelVertex(center, 4, 0, i0.vertex)));
+                outStream.Append(PackVertex(CreateVoxelVertex(center, 5, 1, i1.vertex)));
+                outStream.Append(PackVertex(CreateVoxelVertex(center, 0, 2, i2.vertex)));
+                outStream.Append(PackVertex(CreateVoxelVertex(center, 1, 3, i0.vertex)));
                 outStream.RestartStrip();
 
                 // back
 
-                outStream.Append(PackVertex(CreateVoxelVertex(center, _VoxelSize, 6, 0)));
-                outStream.Append(PackVertex(CreateVoxelVertex(center, _VoxelSize, 7, 1)));
-                outStream.Append(PackVertex(CreateVoxelVertex(center, _VoxelSize, 4, 2)));
-                outStream.Append(PackVertex(CreateVoxelVertex(center, _VoxelSize, 5, 3)));
+                outStream.Append(PackVertex(CreateVoxelVertex(center, 6, 0, i0.vertex)));
+                outStream.Append(PackVertex(CreateVoxelVertex(center, 7, 1, i1.vertex)));
+                outStream.Append(PackVertex(CreateVoxelVertex(center, 4, 2, i2.vertex)));
+                outStream.Append(PackVertex(CreateVoxelVertex(center, 5, 3, i0.vertex)));
                 outStream.RestartStrip();
 
                 // right
 
-                outStream.Append(PackVertex(CreateVoxelVertex(center, _VoxelSize, 2, 0)));
-                outStream.Append(PackVertex(CreateVoxelVertex(center, _VoxelSize, 3, 1)));
-                outStream.Append(PackVertex(CreateVoxelVertex(center, _VoxelSize, 6, 2)));
-                outStream.Append(PackVertex(CreateVoxelVertex(center, _VoxelSize, 7, 3)));
+                outStream.Append(PackVertex(CreateVoxelVertex(center,  2, 0, i0.vertex)));
+                outStream.Append(PackVertex(CreateVoxelVertex(center,  3, 1, i1.vertex)));
+                outStream.Append(PackVertex(CreateVoxelVertex(center,  6, 2, i2.vertex)));
+                outStream.Append(PackVertex(CreateVoxelVertex(center,  7, 3, i0.vertex)));
                 outStream.RestartStrip();
 
                 // top
 
-                outStream.Append(PackVertex(CreateVoxelVertex(center, _VoxelSize, 1, 0)));
-                outStream.Append(PackVertex(CreateVoxelVertex(center, _VoxelSize, 5, 1)));
-                outStream.Append(PackVertex(CreateVoxelVertex(center, _VoxelSize, 3, 2)));
-                outStream.Append(PackVertex(CreateVoxelVertex(center, _VoxelSize, 7, 3)));
+                outStream.Append(PackVertex(CreateVoxelVertex(center, 1, 0, i0.vertex)));
+                outStream.Append(PackVertex(CreateVoxelVertex(center, 5, 1, i1.vertex)));
+                outStream.Append(PackVertex(CreateVoxelVertex(center, 3, 2, i2.vertex)));
+                outStream.Append(PackVertex(CreateVoxelVertex(center, 7, 3, i0.vertex)));
                 outStream.RestartStrip();
 
                 // bottom
 
-                outStream.Append(PackVertex(CreateVoxelVertex(center, _VoxelSize, 2, 0)));
-                outStream.Append(PackVertex(CreateVoxelVertex(center, _VoxelSize, 6, 1)));
-                outStream.Append(PackVertex(CreateVoxelVertex(center, _VoxelSize, 0, 2)));
-                outStream.Append(PackVertex(CreateVoxelVertex(center, _VoxelSize, 4, 3)));
+                outStream.Append(PackVertex(CreateVoxelVertex(center, 2, 0, i0.vertex)));
+                outStream.Append(PackVertex(CreateVoxelVertex(center, 6, 1, i1.vertex)));
+                outStream.Append(PackVertex(CreateVoxelVertex(center, 0, 2, i2.vertex)));
+                outStream.Append(PackVertex(CreateVoxelVertex(center, 4, 3, i0.vertex)));
                 outStream.RestartStrip();
             }
 
             fixed4 frag (g2f i) : SV_Target
             {
                 // sample the texture
-                fixed4 col = tex2D(_MainTex, i.uv);
-                col.rg = i.uv;
+                fixed4 col = lerp(
+                    tex2D(_MainTex, i.uv),
+                    float4(i.uv.x, i.uv.y, 1., 1.),
+                    step(0.5, _ShowUV)
+                );
                 // apply fog
                 UNITY_APPLY_FOG(i.fogCoord, col);
                 return col;
