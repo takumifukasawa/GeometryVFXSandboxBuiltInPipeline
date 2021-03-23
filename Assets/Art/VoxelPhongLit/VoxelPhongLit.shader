@@ -1,4 +1,4 @@
-Shader "Custom/VoxelUnlit"
+Shader "Custom/VoxelPhongLit"
 {
     Properties
     {
