@@ -1,4 +1,4 @@
-Shader "Unlit/PointToPolygonUnlit"
+Shader "Custom/PointToPolygonUnlit"
 {
     Properties
     {

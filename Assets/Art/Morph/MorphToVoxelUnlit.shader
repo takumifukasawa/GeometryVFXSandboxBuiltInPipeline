@@ -1,4 +1,4 @@
-Shader "Unlit/MorphToVoxelUnlit"
+Shader "Custom/MorphToVoxelUnlit"
 {
     Properties
     {

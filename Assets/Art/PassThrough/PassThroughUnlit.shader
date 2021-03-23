@@ -1,4 +1,4 @@
-Shader "Unlit/PassThroughUnlit"
+Shader "Custom/PassThroughUnlit"
 {
     Properties
     {

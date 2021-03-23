@@ -1,4 +1,4 @@
-Shader "Custom/PolygonShutterUnlit"
+Shader "Custom/PolygonShutterDeferred"
 {
     Properties
     {
@@ -38,9 +38,9 @@ Shader "Custom/PolygonShutterUnlit"
 
             struct g2f
             {
-                float4 vertex : SV_POSITION;
-                UNITY_FOG_COORDS(1)
                 float2 uv : TEXCOORD0;
+                UNITY_FOG_COORDS(1)
+                float4 vertex : SV_POSITION;
                 float morphRate : TEXCOORD1;
             };
 
