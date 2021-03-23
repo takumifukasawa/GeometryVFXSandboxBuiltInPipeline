@@ -65,7 +65,7 @@ Material:
     - _GlossyReflections: 1
     - _Metallic: 0
     - _Mode: 0
-    - _MorphRate: 0.374
+    - _MorphRate: 0.452
     - _OcclusionStrength: 1
     - _Parallax: 0.02
     - _Size: 0.0214

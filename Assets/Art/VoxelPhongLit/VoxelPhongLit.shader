@@ -3,7 +3,6 @@ Shader "Custom/VoxelPhongLit"
     Properties
     {
         _MainTex ("Texture", 2D) = "white" {}
-        _Size ("Size", Range(0, 0.1)) = 0.01
         _PointLightPosition ("Point Light Position", Vector) = (1, 1, 1, 1)
         _PointLightPower ("Point Light Power", Range(0, 128)) = 10
         _PointLightAttenuation ("Point Light Attenuation", Range(0, 10)) = 1
@@ -11,6 +10,10 @@ Shader "Custom/VoxelPhongLit"
         _SpecularColor ("Specular Color", Color) = (1, 1, 1, 1)
         _SpecularPower ("Specular Power", Range(0, 128)) = 32
         _AmbientColor ("Ambient Color", Color) = (1, 1, 1, 1)
+        _VoxelSize ("Voxel Size", Range(0, 0.1)) = 0.01
+        _MovementAmplify ("Movement Amplify", Range(0, 1)) = 0.1
+        _MovementSeed ("Movement Seed", Range(0, 100)) = 10
+        _MovementSpeed ("Movement Speed", Range(0, 500)) = 10
     }
     SubShader
     {
@@ -32,7 +35,6 @@ Shader "Custom/VoxelPhongLit"
 
             sampler2D _MainTex;
             float4 _MainTex_ST;
-            float _Size;
             float3 _PointLightPosition;
             float _PointLightAttenuation;
             float _PointLightPower;
@@ -40,11 +42,16 @@ Shader "Custom/VoxelPhongLit"
             half3 _SpecularColor;
             float _SpecularPower;
             half3 _AmbientColor;
+            float _MovementAmplify;
+            float _MovementSpeed;
+            float _MovementSeed;
+            float _VoxelSize;
 
             struct appdata
             {
                 float4 vertex : POSITION;
                 float2 uv : TEXCOORD0;
+                float3 normal : NORMAL;
             };
 
             struct g2f
@@ -100,27 +107,7 @@ Shader "Custom/VoxelPhongLit"
             }
 
             // VertexAttributes CreateVoxelVertex(float4 vertex, float size, int offsetIndex, int uvIndex, float3 v1, float3 v2) {
-            VertexAttributes CreateVoxelVertex(float4 wp, float3 wn, int offsetIndex, int uvIndex) {
-                // -------------------
-                //     5 ----- 7
-                //    /|      /|
-                //   1 ----- 3 |
-                //   | |     | |
-                //   | 4 ----- 6
-                //   |/      |/
-                //   0 ----- 2
-                // -------------------
-                static float3 offsets[8] = {
-                    float3(-1, -1, -1), // 0
-                    float3(-1, 1, -1),  // 1
-                    float3(1, -1, -1),  // 2
-                    float3(1, 1, -1),   // 3
-                    float3(-1, -1, 1),  // 4
-                    float3(-1, 1, 1),   // 5
-                    float3(1, -1, 1),   // 6
-                    float3(1, 1, 1)     // 7
-                };
-
+            VertexAttributes CreateVoxelVertex(float4 wp, float3 wn, int uvIndex) {
                 // -------------------
                 //   1 ----- 3
                 //   |       |
@@ -134,22 +121,19 @@ Shader "Custom/VoxelPhongLit"
                     float2(1, 0),
                     float2(1, 1)
                 };
-            
-                float3 offset = offsets[offsetIndex];
 
                 VertexAttributes o;
-                // o.vertex = vertex + float4(offset.x, offset.y, offset.z, 0.) * size;
+
                 o.vertex = UnityWorldToClipPos(wp);
                 o.worldPosition = wp;
                 o.uv = uvs[uvIndex];
                 o.normal = wn;
-                // o.normal = calcNormal();
+
                 return o;
             }
 
             appdata vert (appdata v)
             {
-                // v.vertex = mul(unity_ObjectToWorld, v.vertex);
                 v.vertex = mul(unity_ObjectToWorld, v.vertex);
                 return v;
             }
@@ -157,8 +141,6 @@ Shader "Custom/VoxelPhongLit"
             g2f PackVertex(VertexAttributes input) {
                 g2f o;
                 o.vertex = input.vertex;
-                // o.vertex = UnityWorldToClipPos(input.vertex);
-                /// o.vertex = UnityObjectToClipPos(input.vertex);
                 UNITY_TRANSFER_FOG(o,o.vertex);
                 o.uv = TRANSFORM_TEX(input.uv, _MainTex);
                 o.worldPosition = input.worldPosition;
@@ -167,78 +149,80 @@ Shader "Custom/VoxelPhongLit"
             }
 
             [maxvertexcount(24)]
-            void geom (triangle appdata inputs[3], inout TriangleStream<g2f> outStream) {
-                float4 center = (inputs[0].vertex + inputs[1].vertex + inputs[2].vertex) / 3;
-                float2 uv = (inputs[0].uv + inputs[1].uv + inputs[2].uv) / 3;
+            void geom (triangle appdata inputs[3], uint id : SV_PrimitiveID, inout TriangleStream<g2f> outStream) {
+                float4 centerLocalVertex = (inputs[0].vertex + inputs[1].vertex + inputs[2].vertex) / 3;
+                float3 centerLocalNormal = (inputs[0].normal + inputs[1].normal + inputs[2].normal) / 3;
+                float4 offset = float4(centerLocalNormal * sin(id * _MovementSeed + _Time.x * _MovementSpeed) * _MovementAmplify, 1);
 
-                float4 wp0 = GetVoxelPosition(center, _Size, 0);
-                float4 wp1 = GetVoxelPosition(center, _Size, 1);
-                float4 wp2 = GetVoxelPosition(center, _Size, 2);
-                float4 wp3 = GetVoxelPosition(center, _Size, 3);
-                float4 wp4 = GetVoxelPosition(center, _Size, 4);
-                float4 wp5 = GetVoxelPosition(center, _Size, 5);
-                float4 wp6 = GetVoxelPosition(center, _Size, 6);
-                float4 wp7 = GetVoxelPosition(center, _Size, 7);
+                float4 wp0 = GetVoxelPosition(centerLocalVertex + offset, _VoxelSize, 0);
+                float4 wp1 = GetVoxelPosition(centerLocalVertex + offset, _VoxelSize, 1);
+                float4 wp2 = GetVoxelPosition(centerLocalVertex + offset, _VoxelSize, 2);
+                float4 wp3 = GetVoxelPosition(centerLocalVertex + offset, _VoxelSize, 3);
+                float4 wp4 = GetVoxelPosition(centerLocalVertex + offset, _VoxelSize, 4);
+                float4 wp5 = GetVoxelPosition(centerLocalVertex + offset, _VoxelSize, 5);
+                float4 wp6 = GetVoxelPosition(centerLocalVertex + offset, _VoxelSize, 6);
+                float4 wp7 = GetVoxelPosition(centerLocalVertex + offset, _VoxelSize, 7);
 
                 // front
 
                 float3 nFront = calcNormal(wp0.xyz, wp1.xyz, wp2.xyz);
-                outStream.Append(PackVertex(CreateVoxelVertex(wp0, nFront, 0, 0)));
-                outStream.Append(PackVertex(CreateVoxelVertex(wp1, nFront, 1, 1)));
-                outStream.Append(PackVertex(CreateVoxelVertex(wp2, nFront, 2, 2)));
-                outStream.Append(PackVertex(CreateVoxelVertex(wp3, nFront, 3, 3)));
+                outStream.Append(PackVertex(CreateVoxelVertex(wp0, nFront, 0)));
+                outStream.Append(PackVertex(CreateVoxelVertex(wp1, nFront, 1)));
+                outStream.Append(PackVertex(CreateVoxelVertex(wp2, nFront, 2)));
+                outStream.Append(PackVertex(CreateVoxelVertex(wp3, nFront, 3)));
                 outStream.RestartStrip();
 
                 // left
 
                 float3 nLeft = calcNormal(wp4.xyz, wp5.xyz, wp0.xyz);
-                outStream.Append(PackVertex(CreateVoxelVertex(wp4, nLeft, 4, 0)));
-                outStream.Append(PackVertex(CreateVoxelVertex(wp5, nLeft, 5, 1)));
-                outStream.Append(PackVertex(CreateVoxelVertex(wp0, nLeft, 0, 2)));
-                outStream.Append(PackVertex(CreateVoxelVertex(wp1, nLeft, 1, 3)));
+                outStream.Append(PackVertex(CreateVoxelVertex(wp4, nLeft, 0)));
+                outStream.Append(PackVertex(CreateVoxelVertex(wp5, nLeft, 1)));
+                outStream.Append(PackVertex(CreateVoxelVertex(wp0, nLeft, 2)));
+                outStream.Append(PackVertex(CreateVoxelVertex(wp1, nLeft, 3)));
                 outStream.RestartStrip();
 
                 // back
 
                 float3 nBack = nFront * -1;
-                outStream.Append(PackVertex(CreateVoxelVertex(wp6, nBack, 6, 0)));
-                outStream.Append(PackVertex(CreateVoxelVertex(wp7, nBack, 7, 1)));
-                outStream.Append(PackVertex(CreateVoxelVertex(wp4, nBack, 4, 2)));
-                outStream.Append(PackVertex(CreateVoxelVertex(wp5, nBack, 5, 3)));
+                outStream.Append(PackVertex(CreateVoxelVertex(wp6, nBack, 0)));
+                outStream.Append(PackVertex(CreateVoxelVertex(wp7, nBack, 1)));
+                outStream.Append(PackVertex(CreateVoxelVertex(wp4, nBack, 2)));
+                outStream.Append(PackVertex(CreateVoxelVertex(wp5, nBack, 3)));
                 outStream.RestartStrip();
 
                 // right
 
                 float3 nRight = nLeft * -1;
-                outStream.Append(PackVertex(CreateVoxelVertex(wp2, nRight, 2, 0)));
-                outStream.Append(PackVertex(CreateVoxelVertex(wp3, nRight, 3, 1)));
-                outStream.Append(PackVertex(CreateVoxelVertex(wp6, nRight, 6, 2)));
-                outStream.Append(PackVertex(CreateVoxelVertex(wp7, nRight, 7, 3)));
+                outStream.Append(PackVertex(CreateVoxelVertex(wp2, nRight, 0)));
+                outStream.Append(PackVertex(CreateVoxelVertex(wp3, nRight, 1)));
+                outStream.Append(PackVertex(CreateVoxelVertex(wp6, nRight, 2)));
+                outStream.Append(PackVertex(CreateVoxelVertex(wp7, nRight, 3)));
                 outStream.RestartStrip();
 
                 // top
 
                 float3 nTop = calcNormal(wp1.xyz, wp5.xyz, wp3.xyz);
-                outStream.Append(PackVertex(CreateVoxelVertex(wp1, nTop, 1, 0)));
-                outStream.Append(PackVertex(CreateVoxelVertex(wp5, nTop, 5, 1)));
-                outStream.Append(PackVertex(CreateVoxelVertex(wp3, nTop, 3, 2)));
-                outStream.Append(PackVertex(CreateVoxelVertex(wp7, nTop, 7, 3)));
+                outStream.Append(PackVertex(CreateVoxelVertex(wp1, nTop, 0)));
+                outStream.Append(PackVertex(CreateVoxelVertex(wp5, nTop, 1)));
+                outStream.Append(PackVertex(CreateVoxelVertex(wp3, nTop, 2)));
+                outStream.Append(PackVertex(CreateVoxelVertex(wp7, nTop, 3)));
                 outStream.RestartStrip();
 
                 // bottom
 
                 float3 nBottom = calcNormal(wp2.xyz, wp6.xyz, wp0.xyz);
-                outStream.Append(PackVertex(CreateVoxelVertex(wp2, nBottom, 2, 0)));
-                outStream.Append(PackVertex(CreateVoxelVertex(wp6, nBottom, 6, 1)));
-                outStream.Append(PackVertex(CreateVoxelVertex(wp0, nBottom, 0, 2)));
-                outStream.Append(PackVertex(CreateVoxelVertex(wp4, nBottom, 4, 3)));
+                outStream.Append(PackVertex(CreateVoxelVertex(wp2, nBottom, 0)));
+                outStream.Append(PackVertex(CreateVoxelVertex(wp6, nBottom, 1)));
+                outStream.Append(PackVertex(CreateVoxelVertex(wp0, nBottom, 2)));
+                outStream.Append(PackVertex(CreateVoxelVertex(wp4, nBottom, 3)));
                 outStream.RestartStrip();
             }
 
             fixed4 frag (g2f i) : SV_Target
             {
-                // sample the texture
-                fixed4 col = tex2D(_MainTex, i.uv);
+                fixed4 col = fixed4(0, 0, 0, 1);
+
+                fixed4 baseTexture = tex2D(_MainTex, i.uv);
 
                 float3 lightDir = normalize(_PointLightPosition.xyz - i.worldPosition.xyz);
                 float lightPower = _PointLightPower;
@@ -253,11 +237,8 @@ Shader "Custom/VoxelPhongLit"
                 float3 specular = saturate(dot(halfV, i.normal));
                 specular = pow(specular, _SpecularPower);
 
-                col.xyz = (diffuse * _DiffuseColor + specular * _SpecularColor) * lightPower * attenuation + _AmbientColor;
-                // col.xyz = diffuse * _DiffuseColor;
-                // col.xyz = specular * _SpecularColor;
-                // col.xyz = _AmbientColor;
-                // apply fog
+                col.xyz = (diffuse * _DiffuseColor * baseTexture + specular * _SpecularColor) * lightPower * attenuation + _AmbientColor;
+
                 UNITY_APPLY_FOG(i.fogCoord, col);
                 return col;
             }
