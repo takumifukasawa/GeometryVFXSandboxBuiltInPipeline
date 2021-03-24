@@ -65,9 +65,9 @@ Material:
     - _GlossyReflections: 1
     - _Metallic: 0
     - _Mode: 0
-    - _MovementAmplify: 0.149
-    - _MovementSeed: 1.9
-    - _MovementSpeed: 22
+    - _MovementAmplify: 0.136
+    - _MovementSeed: 24.2
+    - _MovementSpeed: 37
     - _OcclusionStrength: 1
     - _Parallax: 0.02
     - _PointLightAttenuation: 0.29

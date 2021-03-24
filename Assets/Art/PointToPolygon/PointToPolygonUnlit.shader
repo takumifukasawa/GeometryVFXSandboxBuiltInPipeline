@@ -73,7 +73,7 @@ Shader "Custom/PointToPolygonUnlit"
                     float2(1, 0),
                     float2(1, 1)
                 };
-  
+
                 [unroll]
                 for(int i = 0; i < 4; i++) {
                     g2f o;
